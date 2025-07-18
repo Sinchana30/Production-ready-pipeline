@@ -3,18 +3,20 @@ pipeline {
 	environment {
 		DOCKER_HUB_CREDS = credentials('dockerhub-credentials')
 		DOCKER_HUB_USER = 'sinchana30shettar'
-		IMG_NAME = ${DOCKER_HUB_USER}/pizza-shop-api
-	}
+		}
 	
 	stages {
 		stage('Build image') {
 			steps{
+				script{
 				echo "Building docker image...."
 				
-				dir(pizza-shop-api) {
-					sh "docker build -t ${IMG_NAME}:${BUILD_NUMBER} ."
+				def IMG_NAME = "${env.DOCKER_HUB_USER}/pizza-shop-api"
+				dir('pizza-shop-api') {
+					sh "docker build -t ${IMG_NAME}:${env.BUILD_NUMBER} ."
 					}	
 				}
+			}
 		}
 	
 		stage('Docker Login') {
@@ -29,20 +31,26 @@ pipeline {
 		
 		stage('Push to DockerHub') {
 			steps{
+				script{
 				echo "Pushing the image to dockerhub...."
-				sh "docker push ${IMG_NAME}:${BUILD_NUMBER}" 
+				def IMG_NAME = "${env.DOCKER_HUB_USER}/pizza-shop-api"
+				sh "docker push ${IMG_NAME}:${env.BUILD_NUMBER}" 
 				}
+			}
 		}
 
 		stage('Deploy to Kubernetes') {
 			steps{
+				script{
+				def IMG_NAME = "${env.DOCKER_HUB_USER}/pizza-shop-api"
 				echo "Deploying the code to kubernetes...."
 				sh """
                 		helm upgrade --install pizza-shop ./my-app-chart \
-                    		--set image.repository=${IMAGE_NAME} \
-                    		--set image.tag=${BUILD_NUMBER} \
+                    		--set image.repository=${IMG_NAME} \
+                    		--set image.tag=${env.BUILD_NUMBER} \
                     		--namespace default
                 		"""
+				}
 			}
 		}
 	
